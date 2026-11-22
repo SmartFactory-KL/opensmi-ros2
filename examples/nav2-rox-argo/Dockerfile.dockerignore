@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: 2026 Technologie-Initiative SmartFactory KL e.V.
+#
+# SPDX-License-Identifier: MIT
+
+# The build context is the repository root; the image needs only these parts of it.
+*
+!pyproject.toml
+!constraints.txt
+!README.md
+!LICENSES
+!src
+!examples/nav2-rox-argo
+src/**/__pycache__
+examples/nav2-rox-argo/reports
+examples/nav2-rox-argo/media

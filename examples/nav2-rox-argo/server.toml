@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: 2026 Technologie-Initiative SmartFactory KL e.V.
+#
+# SPDX-License-Identifier: MIT
+
+# The opensmi server configuration of the example: the endpoint on every interface of the Machine's
+# container, so the scenario and the host (through the published port) reach it. opensmi's default
+# users stay, each with its name as password: fine for a simulation, never for a robot (see
+# docs/deployment.md).
+
+[ua_server]
+endpoint_address = "opc.tcp://0.0.0.0:4840/server"

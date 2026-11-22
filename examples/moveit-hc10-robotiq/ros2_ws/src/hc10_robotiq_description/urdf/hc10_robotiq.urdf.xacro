@@ -1,0 +1,113 @@
+<?xml version="1.0"?>
+<!--
+SPDX-FileCopyrightText: 2026 Technologie-Initiative SmartFactory KL e.V.
+
+SPDX-License-Identifier: MIT
+-->
+<!--
+The cell of the example: a table, a Yaskawa HC10 on it and a Robotiq 2F-85 on its flange, with one
+ros2_control system for Gazebo (gz_ros2_control) that drives the six arm joints and the gripper.
+
+The HC10 macro is ros-industrial/motoman's (fetched and wrapped for ROS2 when the image is built),
+the gripper macro is robotiq_description's (installed from packages.ros.org). Everything else here is
+the example's own.
+-->
+<robot name="hc10_robotiq" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:arg name="controllers" default="$(find hc10_robotiq_description)/config/ros2_controllers.yaml"/>
+
+  <xacro:include filename="$(find motoman_hc10_support)/urdf/hc10_macro.xacro"/>
+  <xacro:include filename="$(find robotiq_description)/urdf/robotiq_2f_85_macro.urdf.xacro"/>
+
+  <!-- The table top is at z = 0.7 m; the robot stands on it, the cube lies on it. -->
+  <xacro:property name="table_height" value="0.7"/>
+
+  <link name="world"/>
+
+  <link name="table">
+    <visual>
+      <origin xyz="0.2 0 ${table_height / 2}"/>
+      <geometry><box size="1.2 1.4 ${table_height}"/></geometry>
+      <material name="table_grey"><color rgba="0.6 0.6 0.6 1"/></material>
+    </visual>
+    <collision>
+      <origin xyz="0.2 0 ${table_height / 2}"/>
+      <geometry><box size="1.2 1.4 ${table_height}"/></geometry>
+    </collision>
+    <inertial>
+      <origin xyz="0.2 0 ${table_height / 2}"/>
+      <mass value="50"/>
+      <inertia ixx="10" ixy="0" ixz="0" iyy="10" iyz="0" izz="10"/>
+    </inertial>
+  </link>
+  <joint name="world-table" type="fixed">
+    <parent link="world"/>
+    <child link="table"/>
+  </joint>
+
+  <xacro:motoman_hc10 prefix=""/>
+  <joint name="table-base_link" type="fixed">
+    <parent link="table"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 ${table_height}"/>
+  </joint>
+
+  <!-- The gripper's own ros2_control block is left out: the one below drives arm and gripper together. -->
+  <xacro:robotiq_gripper name="gripper" prefix="" parent="tool0" include_ros2_control="false">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </xacro:robotiq_gripper>
+
+  <!-- The point between the fingertips: what a grasp pose names. -->
+  <link name="tcp"/>
+  <joint name="robotiq_85_base_link-tcp" type="fixed">
+    <parent link="robotiq_85_base_link"/>
+    <child link="tcp"/>
+    <origin xyz="0 0 0.145"/>
+  </joint>
+
+  <ros2_control name="hc10_robotiq" type="system">
+    <hardware>
+      <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+    </hardware>
+    <xacro:macro name="arm_joint" params="name initial">
+      <joint name="${name}">
+        <command_interface name="position"/>
+        <state_interface name="position"><param name="initial_value">${initial}</param></state_interface>
+        <state_interface name="velocity"/>
+      </joint>
+    </xacro:macro>
+    <!-- Starts in the home pose of the SRDF: forearm forward, flange down. -->
+    <xacro:arm_joint name="joint_1_s" initial="0.0"/>
+    <xacro:arm_joint name="joint_2_l" initial="0.0"/>
+    <xacro:arm_joint name="joint_3_u" initial="1.5708"/>
+    <xacro:arm_joint name="joint_4_r" initial="0.0"/>
+    <xacro:arm_joint name="joint_5_b" initial="-1.5708"/>
+    <xacro:arm_joint name="joint_6_t" initial="0.0"/>
+    <joint name="robotiq_85_left_knuckle_joint">
+      <command_interface name="position"/>
+      <state_interface name="position"><param name="initial_value">0.0</param></state_interface>
+      <state_interface name="velocity"/>
+    </joint>
+    <!-- The rest of the linkage follows the knuckle as mimic joints; gz_ros2_control drives them. -->
+    <joint name="robotiq_85_right_knuckle_joint"/>
+    <joint name="robotiq_85_left_inner_knuckle_joint"/>
+    <joint name="robotiq_85_right_inner_knuckle_joint"/>
+    <joint name="robotiq_85_left_finger_tip_joint"/>
+    <joint name="robotiq_85_right_finger_tip_joint"/>
+  </ros2_control>
+
+  <!-- Grippy finger pads, so the friction grasp holds the cube while the arm carries it. -->
+  <xacro:macro name="pad" params="link">
+    <gazebo reference="${link}">
+      <mu1>2.0</mu1>
+      <mu2>2.0</mu2>
+    </gazebo>
+  </xacro:macro>
+  <xacro:pad link="robotiq_85_left_finger_tip_link"/>
+  <xacro:pad link="robotiq_85_right_finger_tip_link"/>
+
+  <gazebo>
+    <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+      <parameters>$(arg controllers)</parameters>
+    </plugin>
+  </gazebo>
+</robot>

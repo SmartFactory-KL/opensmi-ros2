@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2026 Technologie-Initiative SmartFactory KL e.V.
+#
+# SPDX-License-Identifier: MIT
+
+# Text files are stored with LF and checked out with LF on every platform, so a Windows editor
+# cannot turn a file into CRLF and bury a small change in a whole-file diff.
+* text=auto eol=lf
+
+# Vendored third-party text is stored and checked out exactly as upstream wrote it. Without this
+# a Windows clone would rewrite every line ending, and `tools/catalog_check.py` -- which asserts
+# that what is carried here is byte-identical to what its pinned commit produces -- would fail on
+# a difference nobody introduced.
+catalog/packages/** -text
+tools/catalog/_vendor/*.py -text

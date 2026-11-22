@@ -1,0 +1,109 @@
+# SPDX-FileCopyrightText: 2026 Technologie-Initiative SmartFactory KL e.V.
+#
+# SPDX-License-Identifier: MIT
+
+# The two simulated-robot examples. `images` builds their Docker images (a pull request only builds,
+# main and tags push to the GitHub container registry). `scenario` runs a scenario end to end in a
+# ROS2 container, without Docker; it is started by hand, because it needs about 10 to 15 minutes and a
+# lot of CPU.
+
+name: Examples
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    paths:
+      - "examples/nav2-rox-argo/**"
+      - "examples/moveit-hc10-robotiq/**"
+      - "src/**"
+      - "pyproject.toml"
+      - "constraints.txt"
+      - ".github/workflows/examples.yml"
+  workflow_dispatch:
+    inputs:
+      example:
+        description: Which scenario to run
+        type: choice
+        options: [nav2-rox-argo, moveit-hc10-robotiq]
+        default: nav2-rox-argo
+
+concurrency:
+  group: examples-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  images:
+    name: image (${{ matrix.example }})
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - example: nav2-rox-argo
+            target: example # the recorder stage is for filming only
+          - example: moveit-hc10-robotiq
+            target: ""
+    env:
+      PUSH: ${{ github.event_name != 'pull_request' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        if: env.PUSH == 'true'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/example-${{ matrix.example }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+      # The build context is the repository root; the Dockerfile is the one run.sh builds locally.
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: examples/${{ matrix.example }}/Dockerfile
+          target: ${{ matrix.target }}
+          build-args: OPENSMI_ROS_COMMIT=${{ github.sha }}
+          push: ${{ env.PUSH == 'true' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.example }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.example }}
+
+  scenario:
+    name: scenario (${{ inputs.example }})
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    container:
+      image: ros@sha256:c3706ef0a0aa45413c07803cf433602f543b22e45b4855f6fca955c2d8ecc4e8
+    steps:
+      - run: apt-get update && apt-get install -y --no-install-recommends git
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      # ci.sh installs what the example's image holds, starts the stack as processes, runs the scenario
+      # and writes reports/report.md.
+      - run: bash examples/${{ inputs.example }}/ci.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: report-${{ inputs.example }}
+          path: examples/${{ inputs.example }}/reports/
+          retention-days: 30

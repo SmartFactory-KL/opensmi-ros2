@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: 2026 Technologie-Initiative SmartFactory KL e.V.
+#
+# SPDX-License-Identifier: MIT
+#
+# The build context is the repository root; the image needs the package and this example only.
+**
+!pyproject.toml
+!constraints.txt
+!README.md
+!LICENSES/
+!src/
+!examples/moveit-hc10-robotiq/
+**/__pycache__
+**/*.pyc
+examples/moveit-hc10-robotiq/reports/

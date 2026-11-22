@@ -1,0 +1,54 @@
+version = 1
+SPDX-PackageName = "OpenSMI-ROS2"
+SPDX-PackageSupplier = "Organization: Technologie-Initiative SmartFactory KL e.V."
+SPDX-PackageDownloadLocation = "https://github.com/SmartFactory-KL/opensmi-ros2"
+
+# Files that cannot carry a comment header (py.typed is an empty marker, and the images in
+# docs/assets) and the Markdown documents, which stay free of licence boilerplate. Everything else
+# carries its own SPDX header.
+[[annotations]]
+path = ["**/*.md", "src/opensmi/ros2/py.typed", "docs/assets/**"]
+SPDX-FileCopyrightText = "2026 Technologie-Initiative SmartFactory KL e.V."
+SPDX-License-Identifier = "MIT"
+
+# Third-party text carried verbatim. A per-file SPDX header is impossible here: writing one into a
+# vendored file changes its bytes, and byte-identical re-extraction at a pinned commit is what
+# makes the pin checkable (tools/catalog_check.py). `catalog/sources.toml` carries the same facts
+# per entry, plus whether the identifier is the vendor's statement or our reading of one.
+
+[[annotations]]
+path = "catalog/packages/neo_msgs2/**"
+SPDX-FileCopyrightText = "2021 Neobotix GmbH"
+SPDX-License-Identifier = "BSD-3-Clause"
+# Determined, not declared: `package.xml` says `BSD`, which is not an SPDX identifier, and the
+# repository has no licence file to disambiguate from. Every Neobotix repository that writes a BSD
+# text out writes the three-clause one.
+
+[[annotations]]
+path = "catalog/packages/neo_srvs2/**"
+SPDX-FileCopyrightText = "2021 Neobotix GmbH"
+SPDX-License-Identifier = "BSD-3-Clause"
+# Determined, and the weaker of the two: `package.xml` declares `LGPL` *and* `BSD`, so this reads
+# the LGPL line as a slip rather than resolving an ambiguity.
+
+[[annotations]]
+path = "catalog/packages/motoros2_interfaces/**"
+SPDX-FileCopyrightText = ["2022-2024 Yaskawa America, Inc.", "2022 Delft University of Technology"]
+SPDX-License-Identifier = "Apache-2.0"
+# Declared, and already REUSE-compliant upstream: every file here carries its own SPDX header, in
+# the vendored bytes. This entry restates what those headers say.
+
+[[annotations]]
+path = "catalog/packages/industrial_msgs/**"
+SPDX-FileCopyrightText = "2012 Southwest Research Institute"
+SPDX-License-Identifier = "BSD-3-Clause"
+# Declared: the repository states BSD-3-Clause and ships the licence text; the `.msg` files
+# themselves are bare.
+
+[[annotations]]
+path = "tools/catalog/_vendor/rosidl_adapter_parser.py"
+SPDX-FileCopyrightText = "2014-2018 Open Source Robotics Foundation, Inc."
+SPDX-License-Identifier = "Apache-2.0"
+# `rosidl_adapter/parser.py` from `ros2/rosidl`, vendored verbatim because `rosidl-adapter` is not
+# published on PyPI. Its own header states the Apache licence in prose rather than as an SPDX
+# identifier, and it is not edited to add one.

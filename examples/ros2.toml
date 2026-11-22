@@ -1,0 +1,9 @@
+# SPDX-FileCopyrightText: 2026 Technologie-Initiative SmartFactory KL e.V.
+#
+# SPDX-License-Identifier: MIT
+
+# ROS2 settings for examples/run_server.py, loaded with ROS2Config.from_toml into a
+# ROS2Config.
+
+domain_id = 42
+node_name = "opensmi_ros2_example"

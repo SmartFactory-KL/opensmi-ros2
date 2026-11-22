@@ -1,0 +1,99 @@
+<?xml version="1.0"?>
+<!--
+SPDX-FileCopyrightText: 2026 Technologie-Initiative SmartFactory KL e.V.
+
+SPDX-License-Identifier: MIT
+-->
+<!--
+The example's world. The robot and its table come from the URDF (spawned by the launch file); this
+file adds the ground, the light, the cube at the pick position and a flat marker at the place
+position. The table top is at z = 0.7 m and the robot's base stands at the origin on it.
+
+  pick position   x = 0.55, y = -0.30   (the cube, 5 cm, lies here at the start)
+  place position  x = 0.55, y =  0.30   (the green marker; the cube should end here)
+-->
+<sdf version="1.9">
+  <world name="pick_place">
+    <physics name="1ms" type="dart">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
+
+    <gravity>0 0 -9.81</gravity>
+
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <model name="ground">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry><plane><normal>0 0 1</normal><size>10 10</size></plane></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><plane><normal>0 0 1</normal><size>10 10</size></plane></geometry>
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="cube">
+      <pose>0.55 -0.30 0.725 0 0 0</pose>
+      <link name="link">
+        <inertial>
+          <mass>0.1</mass>
+          <inertia>
+            <ixx>4.2e-5</ixx><iyy>4.2e-5</iyy><izz>4.2e-5</izz>
+            <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+          </inertia>
+        </inertial>
+        <collision name="collision">
+          <geometry><box><size>0.05 0.05 0.05</size></box></geometry>
+          <surface>
+            <friction><ode><mu>2.0</mu><mu2>2.0</mu2></ode></friction>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.05 0.05 0.05</size></box></geometry>
+          <material>
+            <ambient>0.8 0.1 0.1 1</ambient>
+            <diffuse>0.8 0.1 0.1 1</diffuse>
+          </material>
+        </visual>
+      </link>
+      <!-- Where the cube is, as ground truth: /model/cube/pose, bridged to ROS2 by the launch file. -->
+      <plugin filename="gz-sim-pose-publisher-system" name="gz::sim::systems::PosePublisher">
+        <publish_link_pose>false</publish_link_pose>
+        <publish_model_pose>true</publish_model_pose>
+        <publish_nested_model_pose>false</publish_nested_model_pose>
+        <use_pose_vector_msg>false</use_pose_vector_msg>
+        <update_frequency>10</update_frequency>
+      </plugin>
+    </model>
+
+    <model name="place_marker">
+      <static>true</static>
+      <pose>0.55 0.30 0.7005 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry><box><size>0.08 0.08 0.001</size></box></geometry>
+          <material>
+            <ambient>0.1 0.7 0.1 1</ambient>
+            <diffuse>0.1 0.7 0.1 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+  </world>
+</sdf>

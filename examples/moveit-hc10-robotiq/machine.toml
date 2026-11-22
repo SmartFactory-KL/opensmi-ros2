@@ -1,0 +1,127 @@
+# SPDX-FileCopyrightText: 2026 Technologie-Initiative SmartFactory KL e.V.
+#
+# SPDX-License-Identifier: MIT
+
+# The Machine of the HC10 example: a simulated Yaskawa HC10 with a Robotiq 2F-85, planned by MoveIt 2
+# and simulated in Gazebo. Served with `opensmi-ros2 serve machine.toml` next to that stack (see
+# README.md in this folder). Every Binding names a standard interface of the stack: ros2_control and
+# MoveIt for the arm, the gripper's action controller for the gripper. Only the Workpiece Component
+# is a simulation artefact: the cube's pose as Gazebo knows it.
+
+[machine]
+name = "PickAndPlaceCell"
+
+[machine.identification]
+serial_number = "hc10-cell-0001"
+manufacturer = "OpenSMI-ROS2 example (simulated)"
+product_instance_uri = "urn:example:opensmi-ros2:hc10-cell"
+
+[ros2]
+# The stack's domain; compose.yaml sets the same for every service.
+domain_id = 72
+node_name = "opensmi_ros2_hc10"
+# Gazebo, the controllers and MoveIt take a while to come up the first time.
+startup_timeout = 180.0
+
+[server]
+config = "server.toml"
+
+# -- the arm ----------------------------------------------------------------------------------------
+
+[[component]]
+name = "Arm"
+
+[component.identification]
+serial_number = "hc10-sim-arm"
+manufacturer = "Yaskawa HC10 (simulated)"
+
+# Every joint of the cell, the gripper's knuckle included, as joint_state_broadcaster publishes it.
+[[component.monitoring]]
+name = "JointStates"
+path = "/joint_states"
+message_type = "sensor_msgs/msg/JointState"
+required = true
+
+[[component.monitoring]]
+name = "ControllerState"
+path = "/arm_controller/controller_state"
+message_type = "control_msgs/msg/JointTrajectoryControllerState"
+exclude = ["multi_dof_*"]
+max_rate = 2.0
+
+# ros2_control's controller_manager reports its controllers and hardware here.
+[[component.keyed]]
+name = "Diagnostics"
+path = "/diagnostics"
+message_type = "diagnostic_msgs/msg/DiagnosticArray"
+repeated_field = "status"
+key = ["hardware_id", "name"]
+state_field = "level"
+
+[component.keyed.states]
+0 = "OK"
+1 = "WARN"
+2 = "ERROR"
+3 = "STALE"
+
+# opensmi's severity bands: 0 information, 555 warning, 999 error (a stale diagnostic is an error).
+[component.keyed.severities]
+0 = 0
+1 = 555
+2 = 999
+3 = 999
+
+[[component.method]]
+name = "ListControllers"
+path = "/controller_manager/list_controllers"
+service_type = "controller_manager_msgs/srv/ListControllers"
+
+# MoveIt's own action: plan and execute one motion request. The goal is MoveIt's MotionPlanRequest
+# as it is, so a client chooses the planner (Pilz PTP or LIN, or OMPL), the speed and the goal (a pose
+# or joint positions). Required: the StartupSkill is Running only once move_group is up.
+[[component.action]]
+name = "Move"
+path = "/move_action"
+action_type = "moveit_msgs/action/MoveGroup"
+required = true
+server_timeout = 30.0
+
+# -- the gripper ------------------------------------------------------------------------------------
+
+[[component]]
+name = "Gripper"
+
+[component.identification]
+serial_number = "2f85-sim-gripper"
+manufacturer = "Robotiq 2F-85 (simulated)"
+
+[[component.monitoring]]
+name = "JointStates"
+path = "/joint_states"
+message_type = "sensor_msgs/msg/JointState"
+required = true
+
+# The gripper's action, the same on hardware: robotiq_driver is a ros2_control hardware interface
+# under the same parallel gripper controller. The goal is a sensor_msgs/JointState naming the knuckle
+# joint and its target angle: 0 open, 0.8 closed.
+[[component.action]]
+name = "GripperCommand"
+path = "/gripper_controller/gripper_cmd"
+action_type = "control_msgs/action/ParallelGripperCommand"
+required = true
+
+# -- the simulated world ----------------------------------------------------------------------------
+
+# Where the cube is, as Gazebo knows it. A real cell would see it with a camera; the simulation just
+# says, so a client can check that the cube ended at the place position.
+[[component]]
+name = "Workpiece"
+
+[component.identification]
+serial_number = "cube-0001"
+manufacturer = "Gazebo (ground truth)"
+
+[[component.monitoring]]
+name = "Pose"
+path = "/cube/pose"
+message_type = "geometry_msgs/msg/PoseStamped"

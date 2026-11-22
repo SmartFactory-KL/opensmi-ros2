@@ -1,0 +1,9 @@
+# SPDX-FileCopyrightText: 2026 Technologie-Initiative SmartFactory KL e.V.
+#
+# SPDX-License-Identifier: MIT
+#
+# The opensmi releases (from PyPI) development and CI build against. Used only with `pip install -c`;
+# the package metadata in pyproject.toml holds ranges. Raise a pin deliberately, in its own merge
+# request.
+OpenSMI-Server==0.4.1
+OpenSMI-Core==0.8.1

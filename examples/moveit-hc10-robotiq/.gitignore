@@ -1,0 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Technologie-Initiative SmartFactory KL e.V.
+#
+# SPDX-License-Identifier: MIT
+
+# What run.sh and ci.sh write: the scenario's report and the stack's logs.
+reports/

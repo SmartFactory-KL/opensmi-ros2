@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<!--
+SPDX-FileCopyrightText: 2026 Technologie-Initiative SmartFactory KL e.V.
+
+SPDX-License-Identifier: MIT
+-->
+<package format="3">
+  <name>hc10_robotiq_moveit_config</name>
+  <version>0.0.0</version>
+  <description>MoveIt 2 configuration of the OpenSMI-ROS2 HC10 example, and the launch file that starts the whole cell.</description>
+  <maintainer email="noreply@example.com">OpenSMI-ROS2 example</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <exec_depend>hc10_robotiq_description</exec_depend>
+  <exec_depend>moveit_configs_utils</exec_depend>
+  <exec_depend>moveit_ros_move_group</exec_depend>
+  <exec_depend>moveit_kinematics</exec_depend>
+  <exec_depend>moveit_planners</exec_depend>
+  <exec_depend>moveit_simple_controller_manager</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

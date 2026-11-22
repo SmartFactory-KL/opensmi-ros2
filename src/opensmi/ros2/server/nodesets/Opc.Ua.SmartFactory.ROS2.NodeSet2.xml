@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+SPDX-FileCopyrightText: 2026 Technologie-Initiative SmartFactory KL e.V.
+
+SPDX-License-Identifier: MIT
+
+This project's own information model, and the only one it defines.
+
+It is shipped as a nodeset rather than created at run time, and registered and imported through
+opensmi.server's nodeset handling like every standard nodeset. The namespace URI names the
+information model rather than the distribution that ships it.
+
+Two things live here:
+
+* `BindingEventType`, the one event this project raises about itself. It subtypes `BaseEventType`
+  (i=2041) rather than the house `AlertType`, which is an `AlarmConditionType` descendant and
+  would promise a condition lifecycle the stack underneath does not implement.
+* `SignedByteString`, a `ByteString` (i=15) subtype that says the elements packed into a bulk
+  payload are signed.
+
+The event type's three properties carry no access level, which leaves them at the default of
+read-only. The house `AlertType` marks its own `ErrorCode` writable; an event field is something
+a server reports and a client reads, so copying that would hand a client a write it has no
+business making.
+
+The NodeId class in smart_factory_ros2.py is generated from this file with opensmi's nodeset
+generator. Re-generate it by hand whenever this file changes.
+-->
+<UANodeSet xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:uax="http://opcfoundation.org/UA/2008/02/Types.xsd" xmlns="http://opcfoundation.org/UA/2011/03/UANodeSet.xsd">
+    <NamespaceUris>
+        <Uri>http://smartfactory.de/UA/ROS2</Uri>
+    </NamespaceUris>
+    <Models>
+        <Model ModelUri="http://smartfactory.de/UA/ROS2" PublicationDate="2026-09-19T00:00:00Z" Version="1.00">
+            <RequiredModel ModelUri="http://opcfoundation.org/UA/" PublicationDate="2021-12-15T00:00:00Z" Version="1.05.01"/>
+        </Model>
+    </Models>
+    <Aliases>
+        <Alias Alias="String">i=12</Alias>
+        <Alias Alias="ByteString">i=15</Alias>
+    </Aliases>
+
+    <UAObjectType NodeId="ns=1;i=1001" BrowseName="1:BindingEventType">
+        <DisplayName>BindingEventType</DisplayName>
+        <Description Locale="en">An event whose subject is always a Binding: which Binding, which ROS2 path, and a code.</Description>
+        <References>
+            <Reference ReferenceType="HasSubtype" IsForward="false">i=2041</Reference>
+            <Reference ReferenceType="HasProperty">ns=1;i=6001</Reference>
+            <Reference ReferenceType="HasProperty">ns=1;i=6002</Reference>
+            <Reference ReferenceType="HasProperty">ns=1;i=6003</Reference>
+        </References>
+    </UAObjectType>
+    <UAVariable DataType="String" NodeId="ns=1;i=6001" BrowseName="1:Binding" ParentNodeId="ns=1;i=1001">
+        <DisplayName>Binding</DisplayName>
+        <Description Locale="en">The name of the Binding this event is about.</Description>
+        <References>
+            <Reference ReferenceType="HasTypeDefinition">i=68</Reference>
+            <Reference ReferenceType="HasModellingRule">i=78</Reference>
+        </References>
+    </UAVariable>
+    <UAVariable DataType="String" NodeId="ns=1;i=6002" BrowseName="1:ROS2Path" ParentNodeId="ns=1;i=1001">
+        <DisplayName>ROS2Path</DisplayName>
+        <Description Locale="en">The ROS2 topic, service, action or node path that Binding names.</Description>
+        <References>
+            <Reference ReferenceType="HasTypeDefinition">i=68</Reference>
+            <Reference ReferenceType="HasModellingRule">i=78</Reference>
+        </References>
+    </UAVariable>
+    <UAVariable DataType="String" NodeId="ns=1;i=6003" BrowseName="1:Code" ParentNodeId="ns=1;i=1001">
+        <DisplayName>Code</DisplayName>
+        <Description Locale="en">What happened, as a stable identifier a client can branch on.</Description>
+        <References>
+            <Reference ReferenceType="HasTypeDefinition">i=68</Reference>
+            <Reference ReferenceType="HasModellingRule">i=78</Reference>
+        </References>
+    </UAVariable>
+
+    <UADataType NodeId="ns=1;i=3001" BrowseName="1:SignedByteString">
+        <DisplayName>SignedByteString</DisplayName>
+        <Description Locale="en">A bulk payload whose packed elements are signed two's-complement integers of the element width. A payload whose elements are unsigned keeps the plain ByteString, which OPC UA already defines as a string of unsigned bytes.</Description>
+        <References>
+            <Reference ReferenceType="HasSubtype" IsForward="false">i=15</Reference>
+        </References>
+    </UADataType>
+</UANodeSet>

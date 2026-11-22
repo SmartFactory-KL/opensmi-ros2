@@ -1,0 +1,40 @@
+# SPDX-FileCopyrightText: 2026 Technologie-Initiative SmartFactory KL e.V.
+#
+# SPDX-License-Identifier: MIT
+
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+
+# Packaging
+*.egg-info/
+build/
+dist/
+
+# Virtual environments
+.venv/
+venv/
+
+# Test / lint caches
+.pytest_cache/
+.ruff_cache/
+.pip-cache/
+
+# Editors
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Local wrappers carrying values of a private environment
+*.local.*
+
+# Local agent workflow files (kept on disk, not in git)
+CLAUDE.md
+AGENTS.md
+.claude/
+docs/agents/
+
+# Output of pydoctor
+apidocs/

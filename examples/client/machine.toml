@@ -1,0 +1,60 @@
+# SPDX-FileCopyrightText: 2026 Technologie-Initiative SmartFactory KL e.V.
+#
+# SPDX-License-Identifier: MIT
+
+# The Machine of the client quickstart (docs/client-quickstart.md): one Component with a finite Skill,
+# a Method, and a Method and a Skill whose ROS 2 counterparts nobody serves. It needs only packages that ship with ROS 2
+# Jazzy, and two demo nodes to answer:
+#
+#   ros2 run action_tutorials_py fibonacci_action_server
+#   ros2 run demo_nodes_cpp add_two_ints_server
+#
+# Serve it with `opensmi-ros2 serve examples/client/machine.toml`; examples/client/quickstart.py is
+# the client.
+
+[machine]
+name = "Demo"
+
+[machine.identification]
+serial_number = "quickstart-0001"
+manufacturer = "Example Manufacturer"
+product_instance_uri = "urn:example:opensmi-ros2:quickstart"
+
+[ros2]
+domain_id = 42
+node_name = "opensmi_ros2_quickstart"
+
+[[component]]
+name = "Workcell"
+
+[component.identification]
+serial_number = "quickstart-workcell-0001"
+manufacturer = "Example Manufacturer"
+
+# A finite Skill: the goal (order) is its Parameters, the feedback (partial_sequence) its Monitoring,
+# and the result (sequence) its FinalResultData.
+[[component.action]]
+name = "Fibonacci"
+path = "/fibonacci"
+action_type = "action_tutorials_interfaces/action/Fibonacci"
+
+# A Method: the request (a, b) is its Parameters, the response (sum) its FinalResultData.
+[[component.method]]
+name = "AddTwoInts"
+path = "/add_two_ints"
+service_type = "example_interfaces/srv/AddTwoInts"
+
+# The same service type on a path nothing serves, to show what a client sees when the ROS 2 side is
+# missing. The server waits one second for a service server instead of the default ten.
+[[component.method]]
+name = "Unserved"
+path = "/no_such_service"
+service_type = "example_interfaces/srv/AddTwoInts"
+server_timeout = 1.0
+
+# The same for an action: nothing serves it, and Start waits one second for an action server.
+[[component.action]]
+name = "UnservedFibonacci"
+path = "/no_such_action"
+action_type = "action_tutorials_interfaces/action/Fibonacci"
+server_timeout = 1.0

@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: 2026 Technologie-Initiative SmartFactory KL e.V.
+#
+# SPDX-License-Identifier: MIT
+#
+# The Cartesian limits of Pilz's LIN motions (the approach to the cube and the retreat from it).
+
+cartesian_limits:
+  max_trans_vel: 0.5
+  max_trans_acc: 1.0
+  max_trans_dec: -1.0
+  max_rot_vel: 1.0

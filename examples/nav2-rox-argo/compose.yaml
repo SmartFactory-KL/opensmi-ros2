@@ -1,0 +1,111 @@
+# SPDX-FileCopyrightText: 2026 Technologie-Initiative SmartFactory KL e.V.
+#
+# SPDX-License-Identifier: MIT
+#
+# The ROX Argo example. From this folder:
+#
+#   docker compose up --build              the simulation and the Machine, at opc.tcp://localhost:4840/server
+#   docker compose --profile gui up        the same, plus the Gazebo window (WSLg or a Linux desktop)
+#   ./run.sh                               the scenario, with a report, and everything removed afterwards
+#   ./record.sh                            the same, filmed into media/rox-argo.mp4
+#
+# Everything runs on its own bridge network and ROS2 domain 71, so it neither sees nor disturbs other
+# ROS2 stacks on the same host.
+
+name: opensmi-ex-rox
+
+x-ros: &ros
+  image: opensmi-ex-rox:local
+  environment:
+    ROS_DOMAIN_ID: "71"
+    RMW_IMPLEMENTATION: rmw_cyclonedds_cpp
+    GZ_PARTITION: opensmi-ex-rox
+  init: true
+
+services:
+  # Gazebo (headless) with the ROX Argo, Nav2 and the diagnostics stand-in. Healthy once both Nav2
+  # lifecycle managers report their nodes active.
+  sim:
+    <<: *ros
+    build:
+      context: ../..
+      dockerfile: examples/nav2-rox-argo/Dockerfile
+      target: example
+      args:
+        OPENSMI_ROS_COMMIT: ${OPENSMI_ROS_COMMIT:-unknown}
+        UBUNTU_MIRROR: ${UBUNTU_MIRROR:-}
+    # The laser scanners render even without a window, so Gazebo gets a virtual display.
+    command: ["bash", "-c", "Xvfb :99 -screen 0 1280x1024x24 -nolisten tcp & export DISPLAY=:99;
+              exec ros2 launch /opt/example/simulation_launch.py"]
+    healthcheck:
+      test: ["CMD", "bash", "/opt/example/entrypoint.sh", "bash", "-c",
+             "for m in localization navigation; do timeout 20 ros2 service call /lifecycle_manager_$$m/is_active std_srvs/srv/Trigger | grep -q success=True || exit 1; done"]
+      interval: 10s
+      timeout: 60s
+      start_period: 300s
+      retries: 30
+
+  # The Machine: `opensmi-ros2 serve` on the example's machine file, started once the stack is up.
+  machine:
+    <<: *ros
+    command: ["opensmi-ros2", "serve", "/opt/example/machine.toml"]
+    depends_on:
+      sim:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${OPCUA_PORT-4840}:4840"
+
+  # The scenario: an OPC UA client that drives every step through the Machine and writes a report
+  # into /reports. run.sh starts it and copies the report out.
+  scenario:
+    <<: *ros
+    profiles: [scenario]
+    command: ["python", "/opt/example/scenario.py", "--endpoint", "opc.tcp://machine:4840/server",
+              "--output", "/reports/report.md"]
+    depends_on:
+      machine:
+        condition: service_started
+
+  # The Gazebo window, as a client of the headless simulation. Uses WSLg's display on Windows and
+  # the X server of a Linux desktop otherwise (run `xhost +local:` there first).
+  gui:
+    <<: *ros
+    profiles: [gui]
+    command: ["gz", "sim", "-g"]
+    environment:
+      ROS_DOMAIN_ID: "71"
+      GZ_PARTITION: opensmi-ex-rox
+      DISPLAY: ${DISPLAY:-:0}
+      QT_QPA_PLATFORM: xcb
+      LIBGL_ALWAYS_SOFTWARE: "1"
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    depends_on:
+      sim:
+        condition: service_started
+
+  # The recorder of record.sh: the Gazebo window on a virtual display inside the container, filmed by
+  # ffmpeg. Needs no display on the host. Its software rendering is held to a few cores, so that it does
+  # not starve the simulation and Nav2 (Nav2's behavior tree gives its servers 20 ms to answer).
+  recorder:
+    <<: *ros
+    image: opensmi-ex-rox-recorder:local
+    profiles: [record]
+    cpus: 4
+    build:
+      context: ../..
+      dockerfile: examples/nav2-rox-argo/Dockerfile
+      target: recorder
+      args:
+        OPENSMI_ROS_COMMIT: ${OPENSMI_ROS_COMMIT:-unknown}
+        UBUNTU_MIRROR: ${UBUNTU_MIRROR:-}
+    command: ["bash", "/opt/example/recording/recorder.sh"]
+    environment:
+      ROS_DOMAIN_ID: "71"
+      GZ_PARTITION: opensmi-ex-rox
+      QT_QPA_PLATFORM: xcb
+      LIBGL_ALWAYS_SOFTWARE: "1"
+      LP_NUM_THREADS: "2"
+    depends_on:
+      sim:
+        condition: service_healthy

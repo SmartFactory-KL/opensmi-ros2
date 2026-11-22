@@ -1,0 +1,103 @@
+# SPDX-FileCopyrightText: 2026 Technologie-Initiative SmartFactory KL e.V.
+#
+# SPDX-License-Identifier: MIT
+
+# The example Robot of examples/machine.py and examples/component.py, as one file.
+# Load it with opensmi.ros2.server.load_machine; tests/test_examples.py checks that it
+# declares the same Machine as the Python example.
+
+[machine]
+name = "Robot"
+
+[machine.identification]
+serial_number = "example-0001"
+manufacturer = "Example Manufacturer"
+product_instance_uri = "urn:example:opensmi-ros2:robot"
+
+[ros2]
+domain_id = 42
+node_name = "opensmi_ros2_example"
+
+[[component]]
+name = "Platform"
+
+[component.identification]
+serial_number = "example-platform-0001"
+manufacturer = "Example Manufacturer"
+
+# Read continuously; required, so the platform's StartupSkill waits for a publisher on it.
+[[component.monitoring]]
+name = "Odom"
+path = "/odom"
+message_type = "nav_msgs/msg/Odometry"
+exclude = ["pose/covariance", "twist/covariance"]
+# rename gives a field another browse name by its path; the name must follow the naming rule.
+rename = {"child_frame_id" = "BaseFrame"}
+required = true
+
+# One member Object per diagnostic id, plus Diagnostics/WorstLevel.
+[[component.keyed]]
+name = "Diagnostics"
+path = "/diagnostics"
+message_type = "diagnostic_msgs/msg/DiagnosticArray"
+repeated_field = "status"
+key = ["hardware_id", "name"]
+state_field = "level"
+
+[component.keyed.states]
+0 = "OK"
+1 = "WARN"
+2 = "ERROR"
+3 = "STALE"
+
+# opensmi's severity bands: 0 information, 555 warning, 999 error.
+[component.keyed.severities]
+0 = 0
+1 = 555
+2 = 999
+3 = 999
+
+# A finite Skill: the goal is its Parameters, the feedback its Monitoring.
+[[component.action]]
+name = "NavigateToPose"
+path = "/navigate_to_pose"
+action_type = "nav2_msgs/action/NavigateToPose"
+
+# A Method: the request is its Parameters, the response its FinalResultData.
+[[component.method]]
+name = "ClearGlobalCostmap"
+path = "/global_costmap/clear_entirely_global_costmap"
+service_type = "nav2_msgs/srv/ClearEntireCostmap"
+
+# A streaming Skill: republished at 20 Hz until Halt, the end of the Lock, or half a second without a write,
+# and ended with a zero twist.
+[[component.publisher]]
+name = "Drive"
+path = "/cmd_vel"
+message_type = "geometry_msgs/msg/Twist"
+continuous = true
+rate = 20.0
+stale_after = 0.5
+halt_message = { linear = { x = 0.0 }, angular = { z = 0.0 } }
+
+[[component.ros2_parameter]]
+name = "Controller"
+path = "/controller_server"
+read_only = ["use_sim_time"]
+
+[component.ros2_parameter.parameters]
+"FollowPath.max_vel_x" = "double"
+use_sim_time = "bool"
+
+# Running means both managed nodes are active.
+[[component.lifecycle]]
+name = "Navigation"
+path = "/lifecycle_manager_navigation"
+nodes = ["/planner_server", "/controller_server"]
+driver = "nav2"
+
+# base_link is the frame the platform is; map -> base_link is a composed pose a client reads.
+[[component.tf]]
+name = "PlatformFrames"
+head = "base_link"
+alternatives = [["map", "base_link"]]

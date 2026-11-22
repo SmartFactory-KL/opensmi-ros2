@@ -1,0 +1,9 @@
+# SPDX-FileCopyrightText: 2026 Technologie-Initiative SmartFactory KL e.V.
+#
+# SPDX-License-Identifier: MIT
+#
+# opensmi.server's configuration for the example: the endpoint on every interface of the container,
+# port 4840, with opensmi's default users (each has its name as password). For a simulation only.
+
+[ua_server]
+endpoint_address = "opc.tcp://0.0.0.0:4840/server"

@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: 2026 Technologie-Initiative SmartFactory KL e.V.
+#
+# SPDX-License-Identifier: MIT
+
+# Reports and logs of local runs (run.sh writes them).
+reports/
+
+# Drawn from world.sdf and derived from the Neobotix parameters by install.sh (ci.sh runs it here).
+map.pgm
+map.yaml
+navigation.yaml

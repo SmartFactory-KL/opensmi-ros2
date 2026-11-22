@@ -1,0 +1,100 @@
+# SPDX-FileCopyrightText: 2026 Technologie-Initiative SmartFactory KL e.V.
+#
+# SPDX-License-Identifier: MIT
+#
+# The HC10 example in Docker. From this folder:
+#
+#   docker compose up --build              Gazebo (headless), MoveIt and the Machine; OPC UA on localhost:4855
+#   docker compose --profile gui up        the same with Gazebo's GUI (Linux X11/Wayland or WSLg)
+#   ./run.sh                               all of it plus the scenario, then everything removed again
+#   ./record.sh                            the same, filmed from Gazebo's GUI into media/
+#
+# All services share one image, built from the repository root so opensmi-ros2 comes from this
+# checkout. They talk ROS2 on domain 72 over their own bridge network, so other ROS2 systems on the
+# host neither see nor disturb them.
+
+name: opensmi-ex-hc10
+
+x-ros: &ros
+  image: opensmi-ex-hc10:local
+  init: true
+  environment:
+    ROS_DOMAIN_ID: "72"
+    RMW_IMPLEMENTATION: rmw_cyclonedds_cpp
+    # Gazebo's transport partition; the GUI joins the simulation through it.
+    GZ_PARTITION: hc10
+  networks: [cell]
+
+services:
+  # Gazebo with the robot, ros2_control and MoveIt's move_group.
+  sim:
+    <<: *ros
+    build:
+      context: ../..
+      dockerfile: examples/moveit-hc10-robotiq/Dockerfile
+      args:
+        UBUNTU_MIRROR: ${UBUNTU_MIRROR:-}
+    command: ["ros2", "launch", "hc10_robotiq_moveit_config", "bringup.launch.py"]
+
+  # The Machine: opensmi-ros2 serves machine.toml next to the simulation.
+  machine:
+    <<: *ros
+    command: ["opensmi-ros2", "serve", "machine.toml"]
+    ports:
+      - "${HC10_OPCUA_PORT:-4855}:4840"
+    depends_on: [sim]
+
+  # The pick and place, driven through OPC UA only. Writes reports/report.md.
+  scenario:
+    <<: *ros
+    profiles: [scenario]
+    command: ["python", "scenario.py"]
+    environment:
+      OPCUA_URL: opc.tcp://machine:4840/server
+      REPORT: reports/report.md
+    volumes:
+      - ./reports:/src/examples/moveit-hc10-robotiq/reports
+    depends_on: [machine]
+
+  # Gazebo's GUI, joined to the headless simulation. Shares the sim container's network, so Gazebo's
+  # transport finds it; it draws on the host's X server (on WSL, the one WSLg provides).
+  gui:
+    image: opensmi-ex-hc10:local
+    init: true
+    profiles: [gui]
+    network_mode: "service:sim"
+    command: ["gz", "sim", "-g"]
+    environment:
+      GZ_PARTITION: hc10
+      GZ_SIM_RESOURCE_PATH: /opt/hc10_ws/install/share:/opt/ros/jazzy/share
+      DISPLAY: ${DISPLAY:-:0}
+      QT_X11_NO_MITSHM: "1"
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    depends_on: [sim]
+
+  # Films the cell for record.sh: Gazebo's GUI on a virtual X server, captured by ffmpeg. Like the
+  # GUI, it shares the sim container's network to join the simulation.
+  recorder:
+    image: opensmi-ex-hc10-record:local
+    build:
+      context: record
+      args:
+        UBUNTU_MIRROR: ${UBUNTU_MIRROR:-}
+    init: true
+    profiles: [record]
+    network_mode: "service:sim"
+    command: ["bash", "record/capture.sh"]
+    environment:
+      GZ_PARTITION: hc10
+      GZ_SIM_RESOURCE_PATH: /opt/hc10_ws/install/share:/opt/ros/jazzy/share
+      LIBGL_ALWAYS_SOFTWARE: "1"
+      OUT: /src/examples/moveit-hc10-robotiq/reports/recording
+    volumes:
+      - ./reports:/src/examples/moveit-hc10-robotiq/reports
+      - ./media:/src/examples/moveit-hc10-robotiq/media
+    depends_on: [sim]
+
+networks:
+  cell:
+    driver: bridge

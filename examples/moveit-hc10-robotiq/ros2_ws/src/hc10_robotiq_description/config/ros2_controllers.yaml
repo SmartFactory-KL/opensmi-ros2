@@ -1,0 +1,56 @@
+# SPDX-FileCopyrightText: 2026 Technologie-Initiative SmartFactory KL e.V.
+#
+# SPDX-License-Identifier: MIT
+#
+# The controllers gz_ros2_control runs: the joint states, a trajectory controller for the six arm
+# joints (which MoveIt executes its plans on) and the gripper as a parallel gripper action controller,
+# the controller robotiq_description pairs with the 2F-85 on hardware too.
+
+controller_manager:
+  ros__parameters:
+    update_rate: 250
+    use_sim_time: true
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+    arm_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+    gripper_controller:
+      type: parallel_gripper_action_controller/GripperActionController
+
+arm_controller:
+  ros__parameters:
+    use_sim_time: true
+    joints:
+      - joint_1_s
+      - joint_2_l
+      - joint_3_u
+      - joint_4_r
+      - joint_5_b
+      - joint_6_t
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
+    state_publish_rate: 50.0
+    action_monitor_rate: 20.0
+    allow_partial_joints_goal: false
+    constraints:
+      stopped_velocity_tolerance: 0.05
+      goal_time: 1.0
+
+gripper_controller:
+  ros__parameters:
+    use_sim_time: true
+    joint: robotiq_85_left_knuckle_joint
+    state_interfaces:
+      - position
+      - velocity
+    # Closing on the cube stops the fingers short of the commanded position: that is a grasp, not a
+    # failure, so a stalled gripper completes its goal.
+    allow_stalling: true
+    stall_timeout: 0.5
+    stall_velocity_threshold: 0.01
+    goal_tolerance: 0.02
+    max_effort: 50.0

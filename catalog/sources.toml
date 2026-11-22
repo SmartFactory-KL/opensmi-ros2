@@ -1,0 +1,164 @@
+# SPDX-FileCopyrightText: 2026 Technologie-Initiative SmartFactory KL e.V.
+#
+# SPDX-License-Identifier: MIT
+
+# Where every ROS2 interface definition this project carries came from.
+#
+# One file, so that its diff is the audit trail of every refresh, and so that "where did this
+# definition come from" has one answer whether the definition arrived by git, by apt or as a
+# vendored parser. `tools/catalog_sync.py` resolves what is written here; `tools/catalog_check.py`
+# is what makes it true, in a pipeline that fails rather than warns.
+
+[catalog]
+# The target distro the membership rule is asked about. An interface package belongs in this
+# catalog **iff** it is in the required scope **and** has no binary release for this distro. The
+# day one gains a `ros-jazzy-*` binary, its entry stops being the best available source of the
+# definition and becomes a stale duplicate of one apt can install -- so `catalog_check.py` fails
+# the merge-request pipeline until the entry is deleted.
+distro = "jazzy"
+# The Ubuntu release Jazzy targets, which is what names the apt index below.
+ubuntu = "noble"
+# Where the rule is asked: the ROS2 apt index itself, read over one request and scanned for
+# `ros-jazzy-<package>`. Not rosdistro, which records what somebody *declared* rather than what
+# was *built* -- the two disagree in the wild, with one vendor package at 3.9.0-1 in rosdistro
+# and 3.8.0 in the index -- and which would cost a YAML parser this tool otherwise does not need.
+#
+# Plain HTTP, and not by oversight: packages.ros.org answers HTTPS with a certificate that does
+# not cover its own hostname, which is checkable in one request and is the same reason apt itself
+# is pointed at the HTTP URL. An apt index is authenticated by the GPG signature over it rather
+# than by the transport, and what rides on this fetch is one catalog-membership verdict rather
+# than anything executed -- so the failure it could be made to produce is a wrong answer in a
+# pipeline, which the reviewer of that pipeline sees.
+binary_index = "http://packages.ros.org/ros2/ubuntu/dists/noble/main/binary-amd64/Packages.gz"
+
+# -- The git tier: packages nothing can install ---------------------------------------------------
+#
+# Extraction is `git init` plus a shallow fetch of one commit, copying `msg/`, `srv/` and
+# `action/` and nothing else. A commit hashes its tree, so re-running extraction at a pin is
+# byte-identical by construction rather than by a discipline anyone has to keep -- which is what
+# makes "vendored whatever was current the day someone ran the script" a detectable state.
+#
+# `commit` is always what extraction resolves, including where a clean tag exists: a tag is a
+# mutable pointer, and rosdistro naming a vendor branch that does not exist upstream
+# is the live demonstration of what a pin that can lie costs.
+#
+# `licence_provenance` is `declared` when the package states an SPDX identifier we can use as
+# written, and `determined` when it does not and we read one out of the available evidence. That
+# distinction is not decoration: two of these four entries rest on our own determination rather
+# than on anything the vendor has said, and a later reader has to be able to see which.
+
+[[package]]
+name = "neo_msgs2"
+repository = "https://github.com/neobotix/neo_msgs2"
+branch = "master"
+commit = "f9f9ff368c933d9cbaf125fcd2e90b6a0093bcf5"
+tag = ""
+subdirectory = ""
+declared_licence = "BSD"
+licence = "BSD-3-Clause"
+licence_provenance = "determined"
+copyright = "2021 Neobotix GmbH"
+extracted = "2026-09-20"
+# `package.xml` says `BSD`, which is not an SPDX identifier, and the repository has no licence
+# file to disambiguate from. Read as BSD-3-Clause on our own determination: every
+# Neobotix repository that writes a BSD text out writes the three-clause one. The manifest is
+# frozen at 0.1.0 and the repository has no tags at all, so the commit is the only pin available.
+
+[[package]]
+name = "neo_srvs2"
+repository = "https://github.com/neobotix/neo_srvs2"
+branch = "master"
+commit = "a8bd5952e69ca7e91970193177c9b2f088be20de"
+tag = ""
+subdirectory = ""
+declared_licence = "LGPL, BSD"
+licence = "BSD-3-Clause"
+licence_provenance = "determined"
+copyright = "2021 Neobotix GmbH"
+extracted = "2026-09-20"
+# The weaker of the two Neobotix determinations, and deliberately recorded as such:
+# `package.xml` declares `LGPL` *and* `BSD`, so reading it as BSD-3-Clause discards a written
+# declaration rather than resolving an ambiguity. The supports are circumstantial -- the `BSD`
+# element sits in the slot `ros2 pkg create` generates and the ROS1 predecessor `neo_srvs` declared
+# a single `BSD` -- and nothing states that the LGPL line is a slip. If Neobotix ever contradicts
+# this, the correction is two strings here and one in REUSE.toml: the vendored bytes are untouched
+# either way, because annotation never enters a vendored file.
+
+[[package]]
+name = "motoros2_interfaces"
+repository = "https://github.com/Yaskawa-Global/motoros2_interfaces"
+branch = "main"
+commit = "24a63cf8a7a582c9fa6744507d605415462c9c17"
+tag = "0.2.0"
+subdirectory = ""
+declared_licence = "Apache-2.0"
+licence = "Apache-2.0"
+licence_provenance = "declared"
+copyright = "2022-2024 Yaskawa America, Inc.; 2022 Delft University of Technology"
+extracted = "2026-09-20"
+# The reference case: already REUSE-compliant upstream. Every interface file carries its own
+# SPDX header and the repository ships its own LICENSES directory, so the annotation in REUSE.toml
+# is a restatement rather than a determination -- and the per-file headers arrive as part of the
+# vendored bytes, which is the only way a header and byte-identical extraction can coexist.
+
+[[package]]
+name = "industrial_msgs"
+repository = "https://github.com/ros-industrial/industrial_core"
+branch = "ros2_msgs_only"
+commit = "d547cdcfdaf3bc0d46325215b8219b0a190c8e6c"
+tag = ""
+subdirectory = "industrial_msgs"
+declared_licence = "BSD-3-Clause"
+licence = "BSD-3-Clause"
+licence_provenance = "declared"
+copyright = "2012 Southwest Research Institute"
+extracted = "2026-09-20"
+# ROS-Industrial is scoped to this one package. Their other vendor packages have Jazzy binaries, so
+# the membership rule drops them; `industrial_reconstruction_msgs` is used by nothing here, and adding
+# it would be satisfying a checklist. The package lives in a subdirectory of a repository whose
+# ROS2 work sits on a branch of its own, and whose tags are all ROS1-era -- so the branch plus the
+# commit is the whole of the pin.
+
+# -- The vendored definition parser ---------------------------------------------------------------
+#
+# `rosidl_adapter.parser` reads `.msg`, `.srv` and `.action` text and imports nothing but the
+# standard library -- but `rosidl-adapter` is not published on PyPI, so using it means vendoring
+# one file rather than writing one dependency line. It is third-party text that goes stale like
+# any other, so it is pinned and watched here like any other; its staleness grading degenerates to
+# "upstream moved, look", which is all a parser needs.
+
+[[vendored]]
+name = "rosidl_adapter.parser"
+repository = "https://github.com/ros2/rosidl"
+branch = "jazzy"
+commit = "85fa592b698b0f665e3120f48fac0d35e2f7d8a4"
+tag = "4.6.9"
+source_path = "rosidl_adapter/rosidl_adapter/parser.py"
+path = "tools/catalog/_vendor/rosidl_adapter_parser.py"
+licence = "Apache-2.0"
+licence_provenance = "declared"
+copyright = "2014-2018 Open Source Robotics Foundation, Inc."
+extracted = "2026-09-20"
+
+# -- The apt tier: packages CI installs rather than carries ---------------------------------------
+#
+# Moving a package out of the catalog because apt can install it only relocates the provenance
+# question unless the apt side is pinned too, and an exact-version apt pin is a time bomb:
+# packages.ros.org keeps exactly one build of each package, so `apt install ros-jazzy-<package>=X`
+# works until the day it does not. What is pinned instead is the image, by digest, so that every
+# version CI introspects is frozen by the same act.
+#
+# What is in the image is what `ros:jazzy-ros-base` ships, which is `common_interfaces` and the
+# client-library packages -- and it is what "every installed interface package" means in the
+# equivalence check. The vendor packages that have binary releases
+# are in no image yet, and the merge request that ships the first Projection for one is what
+# should bake them in and move this digest. Recorded here rather than implied, so that nobody
+# reads this entry as a claim that they are covered today.
+#
+# This is the same digest the `test:jazzy` job runs on, and `tests/test_catalog.py` asserts the two
+# agree: two provenance mechanisms is fine, two places to look is not.
+
+[apt]
+image = "ros:jazzy-ros-base"
+digest = "sha256:c3706ef0a0aa45413c07803cf433602f543b22e45b4855f6fca955c2d8ecc4e8"
+resolved = "2026-09-19"

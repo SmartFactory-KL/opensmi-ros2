@@ -1,0 +1,129 @@
+<?xml version="1.0" ?>
+<!--
+SPDX-FileCopyrightText: 2026 Technologie-Initiative SmartFactory KL e.V.
+
+SPDX-License-Identifier: MIT
+-->
+<!--
+A small room for the ROX Argo example: 10 m by 7 m, a pillar in the middle and two stations (tables)
+against the far wall. The robot spawns at the world origin, which is also the home position and the
+origin of the map. Every obstacle is a static box without rotation; make_map.py reads exactly these
+boxes and draws the map Nav2 localizes against, so a box added here is in the map as well.
+-->
+<sdf version="1.9">
+  <world name="opensmi_room">
+    <physics name="4ms" type="ode">
+      <max_step_size>0.004</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+      <real_time_update_rate>250</real_time_update_rate>
+    </physics>
+    <plugin name="gz::sim::systems::Physics" filename="gz-sim-physics-system"/>
+    <plugin name="gz::sim::systems::UserCommands" filename="gz-sim-user-commands-system"/>
+    <plugin name="gz::sim::systems::SceneBroadcaster" filename="gz-sim-scene-broadcaster-system"/>
+
+    <light name="sun" type="directional">
+      <cast_shadows>false</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.9 0.9 0.9 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <direction>-0.3 0.2 -0.9</direction>
+    </light>
+
+    <model name="ground">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry><plane><normal>0 0 1</normal><size>40 40</size></plane></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><plane><normal>0 0 1</normal><size>40 40</size></plane></geometry>
+          <material><ambient>0.7 0.7 0.7 1</ambient><diffuse>0.7 0.7 0.7 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- The walls: the room spans x from -2 to 8 and y from -3.5 to 3.5 (inner faces). -->
+    <model name="wall_north">
+      <static>true</static>
+      <pose>3 3.6 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>10.4 0.2 1</size></box></geometry></collision>
+        <visual name="visual">
+          <geometry><box><size>10.4 0.2 1</size></box></geometry>
+          <material><ambient>0.8 0.8 0.75 1</ambient><diffuse>0.8 0.8 0.75 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <model name="wall_south">
+      <static>true</static>
+      <pose>3 -3.6 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>10.4 0.2 1</size></box></geometry></collision>
+        <visual name="visual">
+          <geometry><box><size>10.4 0.2 1</size></box></geometry>
+          <material><ambient>0.8 0.8 0.75 1</ambient><diffuse>0.8 0.8 0.75 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <model name="wall_west">
+      <static>true</static>
+      <pose>-2.1 0 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>0.2 7 1</size></box></geometry></collision>
+        <visual name="visual">
+          <geometry><box><size>0.2 7 1</size></box></geometry>
+          <material><ambient>0.8 0.8 0.75 1</ambient><diffuse>0.8 0.8 0.75 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <model name="wall_east">
+      <static>true</static>
+      <pose>8.1 0 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>0.2 7 1</size></box></geometry></collision>
+        <visual name="visual">
+          <geometry><box><size>0.2 7 1</size></box></geometry>
+          <material><ambient>0.8 0.8 0.75 1</ambient><diffuse>0.8 0.8 0.75 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- A pillar between home and the stations, so the planner has to go round something. -->
+    <model name="pillar">
+      <static>true</static>
+      <pose>3 0 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>0.5 0.5 1</size></box></geometry></collision>
+        <visual name="visual">
+          <geometry><box><size>0.5 0.5 1</size></box></geometry>
+          <material><ambient>0.5 0.5 0.55 1</ambient><diffuse>0.5 0.5 0.55 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Station A (north) and station B (south): tables against the east wall. The robot stops in
+         front of them, at x = 5.5. -->
+    <model name="station_a">
+      <static>true</static>
+      <pose>7.4 2.2 0.4 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>1 1.2 0.8</size></box></geometry></collision>
+        <visual name="visual">
+          <geometry><box><size>1 1.2 0.8</size></box></geometry>
+          <material><ambient>0.2 0.45 0.8 1</ambient><diffuse>0.2 0.45 0.8 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <model name="station_b">
+      <static>true</static>
+      <pose>7.4 -2.2 0.4 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>1 1.2 0.8</size></box></geometry></collision>
+        <visual name="visual">
+          <geometry><box><size>1 1.2 0.8</size></box></geometry>
+          <material><ambient>0.85 0.45 0.15 1</ambient><diffuse>0.85 0.45 0.15 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+  </world>
+</sdf>

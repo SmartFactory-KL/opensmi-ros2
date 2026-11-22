@@ -1,0 +1,169 @@
+# SPDX-FileCopyrightText: 2026 Technologie-Initiative SmartFactory KL e.V.
+#
+# SPDX-License-Identifier: MIT
+
+[build-system]
+requires = ["setuptools>=80,<90", "setuptools-scm[simple]>=9.2,<11"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "OpenSMI-ROS2"
+dynamic = ["version"]
+description = "Exposes a ROS2 system as an OPC UA server built on opensmi.server and the SkillSet information model."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSES/MIT.txt"]
+requires-python = ">=3.11"
+
+# see https://pypi.org/classifiers/
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: AsyncIO",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Manufacturing",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Interface Engine/Protocol Translator",
+    "Typing :: Typed",
+]
+
+# Ranges only, so the package stays publishable. The exact opensmi releases used by development and
+# CI are pinned in constraints.txt. rclpy is not listed: it is not on PyPI and comes from a sourced
+# ROS2 installation.
+dependencies = [
+    "OpenSMI-Server>=0.4.1,<0.5",
+    "OpenSMI-Core>=0.8.1,<0.9",
+    "asyncua>=2.0.1,<3",
+    "structlog>=25.1,<27",        # structured logging in the runtime half; no dependencies of its own
+    "typing-extensions>=4.16,<5",
+]
+
+[project.scripts]
+opensmi-ros2 = "opensmi.ros2.cli:main"
+
+[project.urls]
+Repository = "https://github.com/SmartFactory-KL/opensmi-ros2"
+Documentation = "https://smartfactory-kl.github.io/opensmi-ros2/"
+Issues = "https://github.com/SmartFactory-KL/opensmi-ros2/issues"
+Changelog = "https://github.com/SmartFactory-KL/opensmi-ros2/blob/main/docs/migration.md"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15,<1",
+    "basedpyright>=1.39,<2",
+    "pytest>=9,<10",
+    # The Runtime's interface is async-only, so every test of it is a coroutine.
+    "pytest-asyncio>=1.2,<2",
+    "pytest-xdist>=3,<4",
+    "reuse[charset-normalizer]>=5,<7",
+]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.package-data]
+"opensmi.ros2" = ["py.typed"]
+# The generated stubs are the half of the definition catalog that ships. The catalog itself does
+# not: it lives outside `src/`, so nothing importable from `opensmi.ros2` can reach it. What a
+# Component author needs is the *structure* of a vendor type, and that is what a `.pyi` carries.
+"opensmi.ros2.runtime.messages" = ["*.pyi"]
+# The nodeset is data the server imports at run time, so it has to be in the wheel.
+"opensmi.ros2.server.nodesets" = ["*.xml"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+# opensmi is a PEP 420 namespace shared with opensmi.server, opensmi.core and the others, so there
+# is no src/opensmi/__init__.py and setuptools has to look for namespace packages.
+namespaces = true
+
+[tool.setuptools_scm]
+# Versions come from tags vX.Y.Z. The fallback keeps a build without .git working.
+fallback_version = "0.0.0"
+
+[tool.ruff]
+line-length = 120
+indent-width = 4
+target-version = "py311"
+src = ["src", "tests", "tools", "examples"]
+# The vendored parser is `rosidl_adapter/parser.py` from `ros2/rosidl`, kept byte-identical to the
+# commit `catalog/sources.toml` pins, so no rule may edit it. The generated stubs are written by
+# `tools/catalog_sync.py` and never by hand, and their class names are ROS2's own generated names.
+extend-exclude = ["tools/catalog/_vendor", "src/opensmi/ros2/runtime/messages/*.pyi"]
+
+[tool.ruff.lint]
+# CPY001 (the licence header check) is preview-only in ruff; `explicit-preview-rules` opts that
+# one rule in without pulling the rest of the preview rule set along with it.
+preview = true
+explicit-preview-rules = true
+select = [
+    "A", "ANN001", "ANN201", "ANN205", "ANN206",
+    "ASYNC", "B", "C4", "CPY001", "D", "DTZ", "E", "EM",
+    "EXE", "F", "FA", "ICN", "I", "LOG", "T20", "PT",
+    "SLF", "SIM", "C901", "N", "PIE", "PLE", "PYI",
+    "Q", "RSE", "RET", "TD", "PERF", "UP", "FURB", "RUF",
+    "TRY",
+]
+# D203/D213 contradict D211/D212.
+ignore = ["D203", "D213"]
+fixable = ["ALL"]
+unfixable = []
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.lint.flake8-annotations]
+allow-star-arg-any = true
+
+[tool.ruff.lint.isort]
+known-first-party = ["opensmi.ros2", "tests", "tools", "examples"]
+
+[tool.ruff.lint.flake8-copyright]
+notice-rgx = "SPDX-FileCopyrightText: \\d{4}"
+author = "Technologie-Initiative SmartFactory KL e.V."
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["ANN", "D", "T20", "SLF001"]
+"tools/**" = ["T20"]
+# The namespace member's init stays empty: nothing is exported from opensmi.ros2 itself.
+"src/opensmi/ros2/__init__.py" = ["D104"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = true
+docstring-code-line-length = "dynamic"
+
+[tool.basedpyright]
+include = ["src", "tests", "tools", "examples"]
+# Pyright's defaults, plus the vendored parser for the reason ruff excludes it. Setting `exclude`
+# at all replaces the defaults, so they are listed back.
+exclude = ["**/node_modules", "**/__pycache__", "**/.*", "tools/catalog/_vendor"]
+typeCheckingMode = "standard"
+pythonVersion = "3.11"
+executionEnvironments = [{ root = "src" }]
+# rclpy comes from a sourced ROS2 installation and is absent from the plain Python CI images, so
+# an unresolved rclpy import is a warning rather than an error.
+reportMissingImports = "warning"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+# Tests that need a live ROS2 Jazzy graph are marked and deselected by default. The `-p no:`
+# entries disable pytest plugins a sourced ROS2 installation registers globally and that abort
+# collection on current pytest; blocking a plugin that is not installed is a no-op.
+addopts = "-m 'not jazzy and not perf' --strict-markers -p no:launch_testing -p no:launch_ros -p no:launch_pytest"
+markers = [
+    "jazzy: requires a live ROS2 Jazzy installation (run by the `test:jazzy` CI job)",
+    "perf: timing measurements that print a table; run on demand with `pytest -m perf -s`",
+]
+# Every Runtime operation is a coroutine, so an `async def` test is an asyncio test.
+asyncio_mode = "auto"
+
+# The API reference for GitHub Pages (.github/workflows/api-docs.yml): `pydoctor` from the repository root.
+[tool.pydoctor]
+project-name = "OpenSMI-ROS2"
+add-package = ["src/opensmi/ros2"]
+docformat = "restructuredtext"
+theme = "readthedocs"

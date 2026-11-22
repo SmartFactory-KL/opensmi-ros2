@@ -1,0 +1,104 @@
+# SPDX-FileCopyrightText: 2026 Technologie-Initiative SmartFactory KL e.V.
+#
+# SPDX-License-Identifier: MIT
+
+# The simulated Neobotix ROX Argo as a Machine, served with `opensmi-ros2 serve machine.toml`.
+#
+# Every Binding names an interface the Neobotix simulation and Neobotix's Nav2 configuration offer as
+# they are: odometry and the merged laser scan from rox_bringup, the NavigateToPose action and the
+# two lifecycle managers from neo_nav2_bringup. /diagnostics comes from sim_diagnostics.py, which
+# stands in for the relayboard the simulation does not have. The domain matches compose.yaml.
+
+[machine]
+name = "RoxArgo"
+
+[machine.identification]
+serial_number = "rox-argo-sim-0001"
+manufacturer = "Example (simulated Neobotix ROX Argo)"
+product_instance_uri = "urn:example:opensmi-ros2:rox-argo-sim"
+
+[ros2]
+domain_id = 71
+node_name = "opensmi_ros2_rox_argo"
+# The simulation is up before the Machine starts (compose waits for it), so this only has to cover
+# discovery; a cold start without that wait can take longer.
+startup_timeout = 120.0
+
+[server]
+config = "server.toml"
+
+[[component]]
+name = "Platform"
+
+[component.identification]
+serial_number = "rox-argo-sim-0001-platform"
+manufacturer = "Example (simulated Neobotix ROX Argo)"
+
+# Required: the StartupSkill waits until the simulation publishes odometry and scans.
+[[component.monitoring]]
+name = "Odom"
+path = "/odom"
+message_type = "nav_msgs/msg/Odometry"
+exclude = ["pose/covariance", "twist/covariance"]
+required = true
+
+# Both scanners, relayed onto one topic by rox_bringup; read twice a second.
+[[component.monitoring]]
+name = "Scan"
+path = "/scan"
+message_type = "sensor_msgs/msg/LaserScan"
+max_rate = 2.0
+required = true
+
+# One member per diagnostic entry, plus Diagnostics/WorstLevel.
+[[component.keyed]]
+name = "Diagnostics"
+path = "/diagnostics"
+message_type = "diagnostic_msgs/msg/DiagnosticArray"
+repeated_field = "status"
+key = ["hardware_id", "name"]
+state_field = "level"
+
+[component.keyed.states]
+0 = "OK"
+1 = "WARN"
+2 = "ERROR"
+3 = "STALE"
+
+# opensmi's severity bands: 0 information, 555 warning, 999 error.
+[component.keyed.severities]
+0 = 0
+1 = 555
+2 = 999
+3 = 999
+
+# A finite Skill: the goal pose is its Parameters, Nav2's feedback its Monitoring, and Halt cancels
+# the goal.
+[[component.action]]
+name = "NavigateToPose"
+path = "/navigate_to_pose"
+action_type = "nav2_msgs/action/NavigateToPose"
+
+[[component.method]]
+name = "NavigationIsActive"
+path = "/lifecycle_manager_navigation/is_active"
+service_type = "std_srvs/srv/Trigger"
+
+[[component.method]]
+name = "ClearGlobalCostmap"
+path = "/global_costmap/clear_entirely_global_costmap"
+service_type = "nav2_msgs/srv/ClearEntireCostmap"
+
+# Neobotix's two lifecycle managers. Running means every node below is active; Nav2 brings them up
+# itself (autostart), so the StartupSkill finds them active and follows them from then on.
+[[component.lifecycle]]
+name = "Localization"
+path = "/lifecycle_manager_localization"
+nodes = ["/map_server", "/neo_localization2_node"]
+driver = "nav2"
+
+[[component.lifecycle]]
+name = "Navigation"
+path = "/lifecycle_manager_navigation"
+nodes = ["/controller_server", "/planner_server", "/behavior_server", "/bt_navigator", "/waypoint_follower"]
+driver = "nav2"
